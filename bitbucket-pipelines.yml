@@ -1,0 +1,40 @@
+image: node:18
+
+clone:
+  depth: full            # full history for SonarCloud
+
+options:
+  max-time: 40           # optional timeout
+
+definitions:
+  caches:
+    sonar: ~/.sonar/cache
+
+  services:
+    docker:
+      memory: 3072       # free up memory for scanner
+
+  steps:
+    - step: &build-test-sonar
+        name: Build, Test & SonarCloud
+        size: 2x
+        services: [ docker ]
+        caches: [ node, sonar ]
+        script:
+          - npm install
+          - npm run build
+          # (optional) cleanup if re-running pipe in same pipeline
+          - rm -rf /opt/atlassian/pipelines/agent/build/.bitbucket/pipelines/generated/pipeline/pipes
+          - pipe: sonarsource/sonarcloud-scan:4.0.0
+            variables:
+              SONAR_PROJECT_KEY:  laboratoriofinal_cadenix-front
+              SONAR_ORGANIZATION: laboratoriofinal-1
+              DEBUG:              "true"
+
+pipelines:
+  branches:
+    dev:
+      - step: *build-test-sonar
+  pull-requests:
+    '**':
+      - step: *build-test-sonar
